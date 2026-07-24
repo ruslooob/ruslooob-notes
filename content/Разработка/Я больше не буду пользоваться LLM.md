@@ -1,4 +1,5 @@
 ---
+created: 2026-01-02
 publish: "true"
 category: Разработка
 ---

@@ -10,6 +10,7 @@
 
 import fs from "node:fs"
 import path from "node:path"
+import { execSync } from "node:child_process"
 
 // --- Настройки -------------------------------------------------------------
 const VAULT = "C:/Users/rm952/OneDrive/Documents/Zettelkasten/Zettelkasten"
@@ -56,6 +57,33 @@ function getCategory(text) {
     .map((s) => s.trim())
     .filter((s) => s && s !== "..")
     .join("/")
+}
+
+/** Дата первого коммита файла в git ВОЛТА (реальная дата появления заметки).
+ *  Формат YYYY-MM-DD. Пусто, если файл ещё не закоммичен в волт. */
+function gitCreatedDate(absSrc) {
+  const rel = path.relative(VAULT, absSrc)
+  try {
+    const out = execSync(
+      `git -c core.quotepath=false -C "${VAULT}" log --diff-filter=A --follow --format=%aI -- "${rel}"`,
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    ).trim()
+    if (!out) return ""
+    const lines = out.split(/\r?\n/).filter(Boolean)
+    return lines[lines.length - 1].slice(0, 10) // последняя строка = самый ранний коммит
+  } catch {
+    return ""
+  }
+}
+
+/** Если `created` не задан вручную — подставить дату из git волта. */
+function ensureCreated(text, absSrc) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+  if (!m) return text // нет frontmatter — не трогаем
+  if (/^\s*created\s*:/im.test(m[1])) return text // задано вручную — приоритет за пользователем
+  const date = gitCreatedDate(absSrc)
+  if (!date) return text // файла ещё нет в git волта — оставляем дефолт
+  return text.replace(/^---\r?\n/, `---\ncreated: ${date}\n`)
 }
 
 /** Достать имена вложений, на которые ссылается заметка. */
@@ -108,7 +136,7 @@ for (const f of allFiles) {
 // во frontmatter (нет category -> корень). Вложения всегда в корень.
 const usedDest = new Map() // итоговый путь (нижним регистром) -> исходный путь
 const collisions = []
-function place(absSrc, destRel) {
+function place(absSrc, destRel, content /* если задан — пишем его вместо копирования */) {
   const key = destRel.toLowerCase()
   const prev = usedDest.get(key)
   if (prev && prev !== absSrc) {
@@ -116,7 +144,13 @@ function place(absSrc, destRel) {
     return
   }
   usedDest.set(key, absSrc)
-  copyTo(absSrc, destRel)
+  if (content !== undefined) {
+    const dest = path.join(CONTENT, destRel)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(dest, content)
+  } else {
+    copyTo(absSrc, destRel)
+  }
 }
 
 const wantAttachments = new Set()
@@ -124,7 +158,7 @@ const missingTransclusions = []
 for (const { abs, text } of publishedNotes) {
   const category = getCategory(text)
   const dest = category ? `${category}/${path.basename(abs)}` : path.basename(abs)
-  place(abs, dest)
+  place(abs, dest, ensureCreated(text, abs))
   for (const ref of extractRefs(text)) {
     const base = path.basename(ref)
     const src = byBasename.get(base) || byBasename.get(ref)
