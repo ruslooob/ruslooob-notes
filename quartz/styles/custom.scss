@@ -1,3 +1,39 @@
 @use "./base.scss";
 
 // put your custom CSS here!
+
+// Увеличенный базовый шрифт. Quartz измеряет размеры в rem,
+// поэтому изменение font-size у html масштабирует весь текст.
+// По умолчанию 16px — подними/опусти число, чтобы подобрать под себя.
+html {
+  font-size: 20px;
+}
+
+// Левая панель — единый, меньший размер шрифта. Основной текст статей не трогаем.
+.sidebar.left {
+  font-size: 15px;
+
+  .page-title,
+  & ul,
+  & li,
+  & a,
+  & button,
+  & p,
+  & input,
+  .explorer,
+  .explorer-list {
+    font-size: 1em;
+  }
+
+  // Высоту строк при переносе задаёт блок <li> (его "strut"), а не вложенный <a>,
+  // поэтому line-height ставим именно на <li>. Расстояние между пунктами — margin,
+  // так что плотный line-height не сближает сами пункты.
+  .explorer-content li,
+  .folder-container {
+    line-height: 1.1;
+  }
+
+  .explorer-content li {
+    margin: 0.6rem 0;
+  }
+}

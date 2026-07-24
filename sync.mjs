@@ -39,7 +39,23 @@ function walk(dir, acc = []) {
 function isPublished(text) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/)
   if (!m) return false
-  return /^\s*publish\s*:\s*true\s*$/im.test(m[1])
+  // Принимаем true, "true", 'true' — как и фильтр ExplicitPublish в Quartz.
+  return /^\s*publish\s*:\s*["']?true["']?\s*$/im.test(m[1])
+}
+
+/** Достать категорию (папку) из frontmatter: `category: Разработка`.
+ *  Поддерживает вложенность: `category: Разработка/Frontend`. Пусто -> корень. */
+function getCategory(text) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/)
+  if (!m) return ""
+  const c = m[1].match(/^\s*category\s*:\s*["']?(.+?)["']?\s*$/im)
+  if (!c) return ""
+  // Чистим значение: убираем ведущие/замыкающие слэши, запрещаем выход вверх (..).
+  return c[1]
+    .split(/[\\/]+/)
+    .map((s) => s.trim())
+    .filter((s) => s && s !== "..")
+    .join("/")
 }
 
 /** Достать имена вложений, на которые ссылается заметка. */
@@ -88,19 +104,35 @@ for (const f of allFiles) {
   if (isPublished(text)) publishedNotes.push({ abs: f, text })
 }
 
-// Копируем заметки + собираем вложения.
+// Копируем заметки + собираем вложения. Структура папок задаётся полем `category`
+// во frontmatter (нет category -> корень). Вложения всегда в корень.
+const usedDest = new Map() // итоговый путь (нижним регистром) -> исходный путь
+const collisions = []
+function place(absSrc, destRel) {
+  const key = destRel.toLowerCase()
+  const prev = usedDest.get(key)
+  if (prev && prev !== absSrc) {
+    collisions.push({ dest: destRel, a: path.relative(VAULT, prev), b: path.relative(VAULT, absSrc) })
+    return
+  }
+  usedDest.set(key, absSrc)
+  copyTo(absSrc, destRel)
+}
+
 const wantAttachments = new Set()
 const missingTransclusions = []
 for (const { abs, text } of publishedNotes) {
-  const rel = path.relative(VAULT, abs)
-  copyTo(abs, rel)
+  const category = getCategory(text)
+  const dest = category ? `${category}/${path.basename(abs)}` : path.basename(abs)
+  place(abs, dest)
   for (const ref of extractRefs(text)) {
     const base = path.basename(ref)
     const src = byBasename.get(base) || byBasename.get(ref)
     if (!src) continue
     if (src.toLowerCase().endsWith(".md")) {
       // Эмбед другой заметки — она тоже должна быть опубликована.
-      if (!publishedNotes.some((n) => n.abs === src)) missingTransclusions.push({ from: rel, ref })
+      if (!publishedNotes.some((n) => n.abs === src))
+        missingTransclusions.push({ from: path.relative(VAULT, abs), ref })
       continue
     }
     wantAttachments.add(src)
@@ -108,24 +140,31 @@ for (const { abs, text } of publishedNotes) {
 }
 
 for (const src of wantAttachments) {
-  copyTo(src, path.relative(VAULT, src))
+  place(src, path.basename(src))
 }
 
 // Гарантируем главную страницу.
 if (!fs.existsSync(path.join(CONTENT, "index.md"))) {
   fs.writeFileSync(
     path.join(CONTENT, "index.md"),
-    `---\ntitle: Заметки ruslooob\npublish: true\n---\n\nДобро пожаловать. Это публичная часть моих заметок.\n`,
+    `---\ntitle: Ruslooob Notes\npublish: true\n---\n\nДобро пожаловать. Это публичная часть моих заметок.\n`,
   )
 }
 
 // --- Отчёт -----------------------------------------------------------------
 console.log(`\n✅ Опубликовано заметок: ${publishedNotes.length}`)
 console.log(`🖼  Скопировано вложений: ${wantAttachments.size}`)
-for (const n of publishedNotes) console.log(`   • ${path.relative(VAULT, n.abs)}`)
+for (const n of publishedNotes) {
+  const cat = getCategory(n.text)
+  console.log(`   • ${cat ? `[${cat}] ` : ""}${path.basename(n.abs)}`)
+}
 if (missingTransclusions.length) {
   console.log(`\n⚠️  Опубликованные заметки ссылаются (эмбедом) на НЕопубликованные:`)
   for (const m of missingTransclusions) console.log(`   • ${m.from}  →  ${m.ref}`)
+}
+if (collisions.length) {
+  console.log(`\n⚠️  Совпадает итоговый путь (опубликуется только первый файл):`)
+  for (const c of collisions) console.log(`   • ${c.dest}:  ${c.a}  ↔  ${c.b}`)
 }
 if (!publishedNotes.length) {
   console.log(`\n⚠️  Ни одной заметки с "publish: true" не найдено. Добавь его во frontmatter.`)

@@ -1,17 +1,126 @@
-# Quartz v4
+# Ruslooob Notes
 
-> “[One] who works with the door open gets all kinds of interruptions, but [they] also occasionally gets clues as to what the world is and what might be important.” — Richard Hamming
+Публичный сайт на [Quartz](https://quartz.jzhao.xyz/), публикующий избранные заметки из
+приватного Obsidian-волта. Волт остаётся закрытым; публикуются только заметки, явно помеченные
+для публикации.
 
-Quartz is a set of tools that helps you publish your [digital garden](https://jzhao.xyz/posts/networked-thought) and notes as a website for free.
+| | |
+|---|---|
+| Волт (приватный) | `C:\Users\rm952\OneDrive\Documents\Zettelkasten\Zettelkasten` |
+| Проект Quartz | `C:\Users\rm952\ruslooob-notes` |
+| Репозиторий | https://github.com/ruslooob/ruslooob-notes |
+| Сайт | https://ruslooob.github.io/ruslooob-notes/ |
 
-🔗 Read the documentation and get started: https://quartz.jzhao.xyz/
+## Требования
 
-[Join the Discord Community](https://discord.gg/cRFFHYye7t)
+- Node.js версии 22 или выше.
+- Настроенный доступ к GitHub (`gh auth login` выполняется один раз).
 
-## Sponsors
+Все команды выполняются из каталога проекта `C:\Users\rm952\ruslooob-notes`.
 
-<p align="center">
-  <a href="https://github.com/sponsors/jackyzha0">
-    <img src="https://cdn.jsdelivr.net/gh/jackyzha0/jackyzha0/sponsorkit/sponsors.svg" />
-  </a>
-</p>
+## Быстрый старт
+
+1. Пометить нужные заметки полем `publish: true` в шапке (см. раздел «Разметка заметок»).
+2. Проверить результат локально:
+   ```
+   npm run preview
+   ```
+   Сайт откроется на http://localhost:8080. Остановка сервера — `Ctrl+C`.
+3. Опубликовать на рабочий сайт:
+   ```
+   npm run publish-notes
+   ```
+   Сайт обновляется автоматически примерно через минуту.
+
+## Команды
+
+| Команда | Назначение |
+|---|---|
+| `npm run preview` | Синхронизация заметок и запуск локального сайта на http://localhost:8080 |
+| `npm run publish-notes` | Синхронизация, коммит и push; рабочий сайт пересобирается автоматически |
+| `node sync.mjs` | Только синхронизация каталога `content/` без запуска сервера |
+
+## Разметка заметок
+
+### Публикация
+
+Публикуются только заметки, содержащие в шапке (frontmatter) `publish: true`. По умолчанию не
+публикуется ни одна заметка.
+
+```markdown
+---
+title: Заголовок статьи
+publish: true
+---
+
+Текст статьи.
+```
+
+Допустимы оба варианта записи: `publish: true` и `publish: "true"`. Значение `false` или
+`"false"` публикацию не включает.
+
+### Категории (папки)
+
+Поле `category` определяет папку, в которую помещается заметка на сайте.
+
+```markdown
+---
+title: Заголовок статьи
+publish: true
+category: Разработка
+---
+```
+
+- Без поля `category` заметка размещается в корне.
+- Поддерживается вложенность: `category: Разработка/Frontend`.
+- Порядок в левой панели: сначала папки, затем отдельные файлы; внутри группы — по алфавиту.
+- Имена файлов внутри одной папки должны быть уникальными. При совпадении скрипт выводит
+  предупреждение и публикует только первый файл.
+
+### Скрытие фрагментов текста
+
+Текст, заключённый в двойные проценты `%%...%%`, сохраняется в заметке, но не попадает на сайт.
+
+```markdown
+Видимый текст %%скрытый фрагмент%% видимый текст.
+
+%%
+Скрытый блок из нескольких строк.
+%%
+```
+
+Исключение: теги в шапке (`tags:` внутри блока `---`) этим способом не скрываются и отображаются
+на сайте. Тег, не предназначенный для публикации, следует размещать в тексте как `%%#тег%%`.
+
+## Архитектура
+
+- `sync.mjs` — обходит волт, отбирает заметки с `publish: true`, копирует их и связанные
+  изображения в каталог `content/`. Личные каталоги (`Daily`, `Templates`, `.obsidian`,
+  `.trash`) исключены; список исключений задан в начале файла.
+- `content/` — каталог опубликованных заметок. Полностью перезаписывается при каждом запуске
+  `sync.mjs`; ручное редактирование не требуется.
+- Quartz собирает статический сайт из `content/`. В `quartz.config.ts` включён фильтр
+  `ExplicitPublish`: заметки без `publish: true` не рендерятся даже при попадании в `content/`.
+- `.github/workflows/deploy.yml` — при каждом push в ветку `main` пересобирает сайт и
+  публикует его на GitHub Pages.
+
+Схема: Obsidian → `sync.mjs` → `content/` → `git push` → GitHub Actions → сайт.
+
+## Настройка оформления
+
+| Параметр | Файл |
+|---|---|
+| Размер основного шрифта и шрифта левой панели | `quartz/styles/custom.scss` |
+| Название сайта (`pageTitle`) | `quartz.config.ts` |
+| Ссылки в подвале (`Footer`) | `quartz.layout.ts` |
+| Состав панелей слева и справа | `quartz.layout.ts` |
+
+## Устранение неполадок
+
+- **Публикуется 0 заметок.** Проверить наличие `publish: true` в шапке между `---` и
+  расположение заметки вне исключённых каталогов.
+- **Ссылка на неопубликованную заметку.** `sync.mjs` выводит предупреждение; на сайте такая
+  ссылка неактивна. Требуется опубликовать целевую заметку или убрать ссылку.
+- **`git push` запрашивает учётные данные.** Выполнить `gh auth login`.
+- **Снятие заметки с публикации.** Убрать или изменить `publish: true` и повторно выполнить
+  `npm run publish-notes`.
