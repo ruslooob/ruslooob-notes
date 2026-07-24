@@ -4,13 +4,6 @@
 приватного Obsidian-волта. Волт остаётся закрытым; публикуются только заметки, явно помеченные
 для публикации.
 
-| | |
-|---|---|
-| Волт (приватный) | `C:\Users\rm952\OneDrive\Documents\Zettelkasten\Zettelkasten` |
-| Проект Quartz | `C:\Users\rm952\ruslooob-notes` |
-| Репозиторий | https://github.com/ruslooob/ruslooob-notes |
-| Сайт | https://ruslooob.github.io/ruslooob-notes/ |
-
 ## Требования
 
 - Node.js версии 22 или выше.
