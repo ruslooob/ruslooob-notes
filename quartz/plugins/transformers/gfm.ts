@@ -1,5 +1,6 @@
 import remarkGfm from "remark-gfm"
 import smartypants from "remark-smartypants"
+import remarkBreaks from "remark-breaks"
 import { QuartzTransformerPlugin } from "../types"
 import rehypeSlug from "rehype-slug"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
@@ -19,7 +20,10 @@ export const GitHubFlavoredMarkdown: QuartzTransformerPlugin<Partial<Options>> =
   return {
     name: "GitHubFlavoredMarkdown",
     markdownPlugins() {
-      return opts.enableSmartyPants ? [remarkGfm, smartypants] : [remarkGfm]
+      // remarkBreaks: одиночный перенос строки -> <br>, как в Obsidian по умолчанию.
+      const plugins = [remarkGfm, remarkBreaks]
+      if (opts.enableSmartyPants) plugins.push(smartypants)
+      return plugins
     },
     htmlPlugins() {
       if (opts.linkHeadings) {

@@ -178,10 +178,19 @@ for (const src of wantAttachments) {
 }
 
 // Гарантируем главную страницу.
+// Первое, что видит читатель — афоризм-цитата; ниже компонент RecentNotes
+// (см. quartz.layout.ts) выводит последние статьи по убыванию даты.
 if (!fs.existsSync(path.join(CONTENT, "index.md"))) {
   fs.writeFileSync(
     path.join(CONTENT, "index.md"),
-    `---\ntitle: Ruslooob Notes\npublish: true\n---\n\nДобро пожаловать. Это публичная часть моих заметок.\n`,
+    `---
+title: Ruslooob Notes
+publish: true
+---
+
+> Каждый хочет изменить человечество, но никто не задумывается о том, как изменить себя.
+> Лев Толстой
+`,
   )
 }
 

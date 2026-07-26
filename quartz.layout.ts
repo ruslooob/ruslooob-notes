@@ -25,6 +25,19 @@ export const defaultContentPageLayout: PageLayout = {
     Component.ContentMeta(),
     Component.TagList(),
   ],
+  afterBody: [
+    // Только на главной: последние статьи по убыванию даты (created),
+    // компактно (название + дата в одну строку) и с пагинацией.
+    // index сама себя не показывает (filter отсекает её slug).
+    Component.ConditionalRender({
+      component: Component.RecentNotesPaginated({
+        title: "Хронология публикаций",
+        perPage: 10,
+        filter: (f) => f.slug !== "index" && !f.slug?.startsWith("tags/"),
+      }),
+      condition: (page) => page.fileData.slug === "index",
+    }),
+  ],
   left: [
     Component.PageTitle(),
     Component.MobileOnly(Component.Spacer()),

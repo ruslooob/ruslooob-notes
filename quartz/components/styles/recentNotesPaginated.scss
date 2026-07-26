@@ -1,0 +1,69 @@
+@use "../../styles/variables.scss" as *;
+
+.recent-paginated {
+  & > h3 {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .recent-paginated-ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    // Дата и название — на одной строке: сначала дата, затем название.
+    // Без рамок и колонок — простой компактный список.
+    .recent-paginated-li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      padding: 0.15rem 0;
+
+      a.internal {
+        background-color: transparent;
+        padding: 0;
+      }
+
+      .meta {
+        flex-shrink: 0;
+        color: var(--gray);
+        font-size: 0.85em;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .recent-paginated-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+
+    .rp-status {
+      color: var(--gray);
+      font-size: 0.9em;
+      min-width: 3rem;
+      text-align: center;
+    }
+
+    .rp-btn {
+      background-color: var(--lightgray);
+      color: var(--dark);
+      border: none;
+      border-radius: 4px;
+      padding: 0.2rem 0.6rem;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1.2;
+
+      &:hover:not(:disabled) {
+        background-color: var(--gray);
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    }
+  }
+}
