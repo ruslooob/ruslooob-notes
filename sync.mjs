@@ -16,6 +16,11 @@ import { execSync } from "node:child_process"
 const VAULT = "C:/Users/rm952/OneDrive/Documents/Zettelkasten/Zettelkasten"
 const CONTENT = path.resolve("./content")
 
+// Папка для вложений (картинки и пр.), чтобы не захламлять корень content/.
+// Quartz резолвит ссылки по стратегии "shortest" — ищет файл по уникальному
+// имени по всему дереву, поэтому ссылки `![[image.png]]` в заметках менять не нужно.
+const ATTACH_DIR = "attachments"
+
 // Папки, которые никогда не сканируем (личное + служебное).
 const IGNORE_DIRS = new Set([
   ".git", ".obsidian", ".trash", ".idea", ".vs",
@@ -133,7 +138,7 @@ for (const f of allFiles) {
 }
 
 // Копируем заметки + собираем вложения. Структура папок задаётся полем `category`
-// во frontmatter (нет category -> корень). Вложения всегда в корень.
+// во frontmatter (нет category -> корень). Вложения складываем в ATTACH_DIR.
 const usedDest = new Map() // итоговый путь (нижним регистром) -> исходный путь
 const collisions = []
 function place(absSrc, destRel, content /* если задан — пишем его вместо копирования */) {
@@ -174,7 +179,7 @@ for (const { abs, text } of publishedNotes) {
 }
 
 for (const src of wantAttachments) {
-  place(src, path.basename(src))
+  place(src, `${ATTACH_DIR}/${path.basename(src)}`)
 }
 
 // Гарантируем главную страницу.
